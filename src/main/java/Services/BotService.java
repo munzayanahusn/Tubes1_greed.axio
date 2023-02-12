@@ -11,6 +11,7 @@ public class BotService {
     private GameObject bot;
     private PlayerAction playerAction;
     private GameState gameState;
+    private boolean anotherWay = false;
 
     public BotService() {
         this.playerAction = new PlayerAction();
@@ -39,7 +40,6 @@ public class BotService {
         playerAction.action = PlayerActions.FORWARD;
 
         if (!gameState.getGameObjects().isEmpty()) {
-            // GetAway from Gas Cloud
             var nearestObstacleList = gameState.getGameObjects()
                     .stream().filter(item -> item.getGameObjectType() == ObjectTypes.GAS_CLOUD
                             || item.getGameObjectType() == ObjectTypes.ASTEROID_FIELD
@@ -47,9 +47,14 @@ public class BotService {
                     .sorted(Comparator.comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
 
+            var nearestSuperFoodList = gameState.getGameObjects()
+                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.SUPERFOOD)
+                    .sorted(Comparator
+                            .comparing(item -> getDistanceBetween(bot, item)))
+                    .collect(Collectors.toList());
+
             var nearestFoodList = gameState.getGameObjects()
-                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.SUPERFOOD
-                            || item.getGameObjectType() == ObjectTypes.FOOD)
+                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.FOOD)
                     .sorted(Comparator
                             .comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
@@ -59,56 +64,118 @@ public class BotService {
                     .sorted(Comparator.comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
 
+            var nearestSupernovaList = gameState.getGameObjects()
+                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.SUPERNOVA_PICKUP)
+                    .sorted(Comparator.comparing(item -> getDistanceBetween(bot, item)))
+                    .collect(Collectors.toList());
+
             // ACTION
             // Out Of Boundaries
 
-            System.console().printf("------------------\nPlayer distance = " + getDistanceBetween(bot, nearestPlayerList.get(0)) + "\n");
+            System.console().printf("------------------\nTicks " + gameState.world.currentTick + "\n");
+            System.console().printf("Player distance = " + getDistanceBetween(bot, nearestPlayerList.get(0)) + "\n");
             System.console().printf("Player size = " + nearestPlayerList.get(0).getSize() + "\n");
             System.console().printf("Bot size = " + bot.getSize() + "\n");
-            if (getDistanceFromCenter() + 2 * bot.getSize() > gameState.world.getRadius()) {
+            System.console().printf("Obstacle Distance  = " + getDistanceBetween(bot, nearestObstacleList.get(0)) + "\n");
+
+            if ((getDistanceFromCenter() + 2 * bot.getSize()) > gameState.world.getRadius()) {
                 playerAction.heading = goToCenter();
                 System.console().printf("Get Away from Out Of Bound\n");
-            } else if (!nearestPlayerList.isEmpty() && (nearestPlayerList.get(0).getSize() > bot.getSize()) &&
+            } else if (nearestPlayerList.get(0).getSize() > bot.getSize() &&
                     (getDistanceBetween(bot, nearestPlayerList.get(0)) <= (bot.getSize() * 1.5 + nearestPlayerList.get(0).getSize()))){
                 System.console().printf("Get Away from Nearest Bigger Player\n");
                 playerAction.heading = getHeadingAway(nearestPlayerList.get(0));
-            } else if (!nearestObstacleList.isEmpty() && (getDistanceBetween(bot, nearestObstacleList.get(0)) <= (bot.getSize()*2))) {
+            } else if (!nearestObstacleList.isEmpty() && (getDistanceBetween(bot, nearestObstacleList.get(0)) <= (nearestObstacleList.get(0).getSize() + bot.getSize()))) {
                 playerAction.heading = getHeadingAway(nearestObstacleList.get(0));
                 System.console().printf("Get Away from Nearest Obstacle\n");
             } else {
                 System.console().printf("Targeting\n");
-                playerAction.heading = getHeadingBetween(setTarget(nearestFoodList, nearestPlayerList));
+                playerAction.heading = getHeadingBetween(bot, setTarget(nearestSuperFoodList, nearestFoodList, nearestPlayerList, nearestSupernovaList));
             }
         }
         this.playerAction = playerAction;
     }
 
-    public GameObject setTarget(List<GameObject> foodList, List<GameObject> playerList){
+    public GameObject setTarget(List<GameObject> superFoodList, List<GameObject> foodList, List<GameObject> playerList, List<GameObject> supernovaList){
         List<GameObject> enemyDistance;
         GameObject retObject = null;
         GameObject temp = null;
         int i = 0;
 
         if (playerList.get(0).getSize() <= bot.getSize()){
+            // Target : Enemy
+            System.console().printf("Current Target : Enemy \n");
             retObject = playerList.get(0);
         }
+
+        if (!supernovaList.isEmpty()){
+            while(temp == null && i < supernovaList.size()) {
+                enemyDistance = getEnemyDistance(playerList, supernovaList.get(i));
+                if (getDistanceBetween(enemyDistance.get(0), supernovaList.get(i)) < getDistanceBetween(bot, supernovaList.get(i))
+                        || enemyDistance.get(0).currentHeading != getHeadingBetween(enemyDistance.get(0), supernovaList.get(i))) {
+                    // Ada kemungkinan kesini nih!
+                    temp = supernovaList.get(i);
+                } else i++;
+            }
+
+            if (temp != null) {
+                if (retObject == null || getDistanceBetween(bot, temp) < getDistanceBetween(bot, retObject)) {
+                    // Target : Supernova!
+                    System.console().printf("Current Target : Supernova\n");
+                    retObject = temp;
+                }
+            }
+        }
+
+        if (!superFoodList.isEmpty()){
+            i = 0;
+            temp = null;
+            while(temp == null && i < superFoodList.size()) {
+                enemyDistance = getEnemyDistance(playerList, superFoodList.get(i));
+                if (getDistanceBetween(enemyDistance.get(0), superFoodList.get(i)) < getDistanceBetween(bot, superFoodList.get(i))
+                        || enemyDistance.get(0).currentHeading != getHeadingBetween(enemyDistance.get(0), superFoodList.get(i))) {
+                    // Ada kemungkinan kesini nih!
+                    temp = superFoodList.get(i);
+                } else i++;
+            }
+
+            if (temp != null) {
+                if (retObject == null || getDistanceBetween(bot, temp) < getDistanceBetween(bot, retObject)) {
+                    // Target : SuperFood
+                    System.console().printf("Current Target : SuperFood\n");
+                    retObject = temp;
+                }
+            }
+        }
+
         if (!foodList.isEmpty()){
+            i = 0;
+            temp = null;
             while(temp == null && i < foodList.size()) {
-                int finalI = i;
-                enemyDistance = playerList
-                        .stream().sorted(Comparator.comparing(item->getDistanceBetween(item, foodList.get(finalI))))
-                        .collect(Collectors.toList());
-                if (getDistanceBetween(enemyDistance.get(0), foodList.get(i)) < getDistanceBetween(bot, foodList.get(i))) {
+                enemyDistance = getEnemyDistance(playerList, foodList.get(i));
+                if (getDistanceBetween(enemyDistance.get(0), foodList.get(i)) < getDistanceBetween(bot, foodList.get(i))
+                        || enemyDistance.get(0).currentHeading != getHeadingBetween(enemyDistance.get(0), foodList.get(i))) {
+                    // Ada kemungkinan kesini nih!
                     temp = foodList.get(i);
                 } else i++;
             }
             if (temp == null) temp = foodList.get(0);
+
+            if (temp != null) {
+                if (retObject == null ||getDistanceBetween(bot, temp) < getDistanceBetween(bot, retObject)) {
+                    // Target : Food
+                    System.console().printf("Current Target : Food\n");
+                    retObject = temp;
+                }
+            }
         }
-        if (retObject == null || getDistanceBetween(bot, temp) < getDistanceBetween(bot, retObject)) {
-            System.console().printf("Gather food\n");
-            retObject = temp;
-        } else System.console().printf("Go To Smaller Player\n");
         return retObject;
+    }
+
+    public List<GameObject> getEnemyDistance(List<GameObject> playerList, GameObject object) {
+        return playerList.stream()
+                .sorted(Comparator.comparing(item -> getDistanceBetween(item, object)))
+                .collect(Collectors.toList());
     }
 
     public GameState getGameState() {
@@ -140,17 +207,24 @@ public class BotService {
         var direction = toDegrees(Math.atan2(gameState.world.getCenterPoint().y-bot.getPosition().y, gameState.world.getCenterPoint().x - bot.getPosition().x));
         return (direction + 360) % 360;
     }
-    private int getHeadingBetween(GameObject otherObject) {
-        var direction = toDegrees(Math.atan2(otherObject.getPosition().y - bot.getPosition().y,
-                otherObject.getPosition().x - bot.getPosition().x));
+    private int getHeadingBetween(GameObject object, GameObject otherObject) {
+        var direction = toDegrees(Math.atan2(otherObject.getPosition().y - object.getPosition().y,
+                otherObject.getPosition().x - object.getPosition().x));
         return (direction + 360) % 360;
     }
     private int getHeadingAway(GameObject otherObject) {
-        var direction = toDegrees(Math.atan2( otherObject.getPosition().y + 90,
-                otherObject.getPosition().x + 90));
+        var direction = 0;
+        if (!anotherWay){
+            direction = toDegrees(Math.atan2( otherObject.getPosition().y + 90,
+                    otherObject.getPosition().x + 90));
+            anotherWay = true;
+        } else {
+            direction = toDegrees(Math.atan2( otherObject.getPosition().y + 180,
+                    otherObject.getPosition().x + 180));
+            anotherWay = false;
+        }
         return (direction + 360) % 360;
     }
-
     private int toDegrees(double v) {
         return (int) (v * (180 / Math.PI));
     }
