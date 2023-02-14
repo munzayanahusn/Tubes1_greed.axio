@@ -11,7 +11,7 @@ public class BotService {
     private GameObject bot;
     private PlayerAction playerAction;
     private GameState gameState;
-    private boolean anotherWay = false;
+    //private boolean anotherWay = false;
 
     public BotService() {
         this.playerAction = new PlayerAction();
@@ -40,6 +40,7 @@ public class BotService {
         playerAction.action = PlayerActions.FORWARD;
 
         if (!gameState.getGameObjects().isEmpty()) {
+            // Sorting object in surrounding
             var nearestObstacleList = gameState.getGameObjects()
                     .stream().filter(item -> item.getGameObjectType() == ObjectTypes.GAS_CLOUD
                             || item.getGameObjectType() == ObjectTypes.ASTEROID_FIELD
@@ -79,28 +80,62 @@ public class BotService {
             System.console().printf("Obstacle Distance  = " + getDistanceBetween(bot, nearestObstacleList.get(0)) + "\n");
             System.console().printf("Torpedo Salvo count = " + bot.torpedoSalvoCount + "\n");
             System.console().printf("Supernova count = " + bot.supernovaAvailable + "\n");
+            System.console().printf("Player heading" + bot.currentHeading + "\n");
             
-            if (bot.supernovaAvailable > 0) {
+            // Stop Afterburner
+            if (bot.getSize() <= 5) {
+                playerAction.action = PlayerActions.STOP_AFTERBURNER;
+                playerAction.heading = getHeadingBetween(bot, nearestPlayerList.get(0));
+            }
+
+            // Supernova
+            else if (bot.supernovaAvailable > 0) {
                 System.console().printf("Firing Supernova\n");
                 playerAction.action = PlayerActions.FireSupernova;
                 playerAction.heading = getHeadingBetween(bot, nearestPlayerList.get(0));
-            } else if (bot.torpedoSalvoCount > 0) {
+            } 
+            
+            // Torpedo
+            else if (bot.torpedoSalvoCount > 0) {
                 System.console().printf("Firing Torpedo\n");
                 playerAction.action = PlayerActions.FireTorpedoes;
                 playerAction.heading = getHeadingBetween(bot, nearestPlayerList.get(0));
-            } else if ((getDistanceFromCenter() + 2 * bot.getSize()) > gameState.world.getRadius()) {
+            }
+            
+            // Safe zone
+            else if ((getDistanceFromCenter() + 2 * bot.getSize()) > gameState.world.getRadius()) {
                 playerAction.heading = goToCenter();
                 System.console().printf("Get Away from Out Of Bound\n");
-            } else if (nearestPlayerList.get(0).getSize() > bot.getSize() &&
+            }
+            
+            // Jauhin player besar
+            else if (nearestPlayerList.get(0).getSize() > bot.getSize() &&
                     (getDistanceBetween(bot, nearestPlayerList.get(0)) <= (bot.getSize() * 1.5 + nearestPlayerList.get(0).getSize()))){
                 System.console().printf("Get Away from Nearest Bigger Player\n");
                 playerAction.heading = getHeadingAway(nearestPlayerList.get(0));
-            } else if (!nearestObstacleList.isEmpty() && (getDistanceBetween(bot, nearestObstacleList.get(0)) <= (nearestObstacleList.get(0).getSize() + bot.getSize()))) {
+
+                // Afterburner
+                if (getDistanceBetween(nearestPlayerList.get(0), bot) < 4 * bot.getSize()) {
+                    System.console().printf("Start Afterburner to avoid player\n");
+                    playerAction.action = PlayerActions.START_AFTERBURNER;
+                }
+            }
+            
+            // Jauhin obstacle
+            else if (!nearestObstacleList.isEmpty() && (getDistanceBetween(bot, nearestObstacleList.get(0)) <= (nearestObstacleList.get(0).getSize() + bot.getSize()))) {
                 playerAction.heading = getHeadingAway(nearestObstacleList.get(0));
                 System.console().printf("Get Away from Nearest Obstacle\n");
-            } else {
+            } 
+
+            // Cari makan + Start Afterburner (Kalo bisa)
+            else {
                 System.console().printf("Targeting\n");
-                playerAction.heading = getHeadingBetween(bot, setTarget(nearestSuperFoodList, nearestFoodList, nearestPlayerList, nearestSupernovaList));
+                GameObject currentTarget = setTarget(nearestSuperFoodList, nearestFoodList, nearestPlayerList, nearestSupernovaList);
+                playerAction.heading = getHeadingBetween(bot, currentTarget);
+                if (currentTarget.getGameObjectType() == ObjectTypes.PLAYER && sizeComparisonAfterBurner(bot, currentTarget)) {
+                    System.console().printf("Start Afterburner to the target player\n");
+                    playerAction.action = PlayerActions.START_AFTERBURNER;
+                }
             }
         }
         this.playerAction = playerAction;
@@ -111,12 +146,6 @@ public class BotService {
         GameObject retObject = null;
         GameObject temp = null;
         int i = 0;
-
-        if (playerList.get(0).getSize() <= bot.getSize()){
-            // Target : Enemy
-            System.console().printf("Current Target : Enemy \n");
-            retObject = playerList.get(0);
-        }
 
         if (!supernovaList.isEmpty()){
             while(temp == null && i < supernovaList.size()) {
@@ -137,7 +166,14 @@ public class BotService {
             }
         }
 
-        if (!superFoodList.isEmpty()){
+        
+        else if (playerList.get(0).getSize() < bot.getSize() && (getDistanceBetween(bot, playerList.get(0)) < 4 * bot.getSize())){
+            // Target : Enemy
+            System.console().printf("Current Target : Enemy \n");
+            retObject = playerList.get(0);
+        }
+
+        else if (!superFoodList.isEmpty()){
             i = 0;
             temp = null;
             while(temp == null && i < superFoodList.size()) {
@@ -158,7 +194,7 @@ public class BotService {
             }
         }
 
-        if (!foodList.isEmpty()){
+        else /* if (!foodList.isEmpty()) */{
             i = 0;
             temp = null;
             while(temp == null && i < foodList.size()) {
@@ -179,8 +215,29 @@ public class BotService {
                 }
             }
         }
+
+
+
         return retObject;
     }
+
+    public boolean sizeComparisonAfterBurner(GameObject bot, GameObject target) {
+        boolean startBurner;
+        int botSpeed = bot.getSpeed();
+        int targetSize = target.getSize();
+        double distance = getDistanceBetween(bot, target);
+
+        double timeTarget = Math.sqrt((botSpeed*botSpeed) + distance) - botSpeed;
+        double botSizeDuringAfterBurner = timeTarget;
+
+        if (botSizeDuringAfterBurner < targetSize) {
+            startBurner = true;
+        } else {
+            startBurner = false;
+        }
+
+        return startBurner;
+    } 
 
     public List<GameObject> getEnemyDistance(List<GameObject> playerList, GameObject object) {
         return playerList.stream()
@@ -222,19 +279,63 @@ public class BotService {
                 otherObject.getPosition().x - object.getPosition().x));
         return (direction + 360) % 360;
     }
+
+    // Ubah ke arah makanan terdekat yang paling jauh dari obstacle
     private int getHeadingAway(GameObject otherObject) {
+        var nearestFoodList = gameState.getGameObjects()
+                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.FOOD)
+                    .sorted(Comparator
+                            .comparing(item -> getDistanceBetween(bot, item)))
+                    .collect(Collectors.toList());
+
+        List<GameObject> nearestFoodDest = gameState.getGameObjects()
+                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.FOOD)
+                    .sorted(Comparator
+                            .comparing(item -> getDistanceBetween(otherObject, item)))
+                    .collect(Collectors.toList());
+
         var direction = 0;
-        if (!anotherWay){
-            direction = toDegrees(Math.atan2( otherObject.getPosition().y + 90,
-                    otherObject.getPosition().x + 90));
-            anotherWay = true;
-        } else {
-            direction = toDegrees(Math.atan2( otherObject.getPosition().y + 180,
-                    otherObject.getPosition().x + 180));
-            anotherWay = false;
+
+        int lastFoodInList = 0;
+        for (int i = 0; i < nearestFoodList.size(); i++) {
+            if (nearestFoodList.get(i).getId() == nearestFoodDest.get(nearestFoodDest.size()).getId()) {
+                lastFoodInList = i;
+                break;
+            }
         }
-        return (direction + 360) % 360;
+
+        for (int i = nearestFoodDest.size()-1; i > 0; i--) {
+            int currentFoodInList = 0;
+            for (int j = 0; j < nearestFoodList.size(); j++) {
+                if (nearestFoodList.get(j).getId() == nearestFoodDest.get(nearestFoodDest.size()).getId()) {
+                    currentFoodInList = j;
+                    break;
+                }
+            }  
+
+            if (currentFoodInList > lastFoodInList) {
+                break;
+            }
+
+            lastFoodInList = currentFoodInList;
+        }
+
+        direction = getHeadingBetween(bot, nearestFoodList.get(lastFoodInList));
+
+        return direction;
+        //if (!anotherWay){
+        //    direction = toDegrees(Math.atan2( otherObject.getPosition().y + 90,
+        //            otherObject.getPosition().x + 90));
+        //    anotherWay = true;
+        //} else {
+        //    direction = toDegrees(Math.atan2( otherObject.getPosition().y + 180,
+        //            otherObject.getPosition().x + 180));
+        //    anotherWay = false;
+        //}
+        //return (direction + 360) % 360;
     }
+
+
     private int toDegrees(double v) {
         return (int) (v * (180 / Math.PI));
     }
