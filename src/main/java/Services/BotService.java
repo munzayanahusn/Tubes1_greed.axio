@@ -77,8 +77,18 @@ public class BotService {
             System.console().printf("Player size = " + nearestPlayerList.get(0).getSize() + "\n");
             System.console().printf("Bot size = " + bot.getSize() + "\n");
             System.console().printf("Obstacle Distance  = " + getDistanceBetween(bot, nearestObstacleList.get(0)) + "\n");
-
-            if ((getDistanceFromCenter() + 2 * bot.getSize()) > gameState.world.getRadius()) {
+            System.console().printf("Torpedo Salvo count = " + bot.torpedoSalvoCount + "\n");
+            System.console().printf("Supernova count = " + bot.supernovaAvailable + "\n");
+            
+            if (bot.supernovaAvailable > 0) {
+                System.console().printf("Firing Supernova\n");
+                playerAction.action = PlayerActions.FireSupernova;
+                playerAction.heading = getHeadingBetween(bot, nearestPlayerList.get(0));
+            } else if (bot.torpedoSalvoCount > 0) {
+                System.console().printf("Firing Torpedo\n");
+                playerAction.action = PlayerActions.FireTorpedoes;
+                playerAction.heading = getHeadingBetween(bot, nearestPlayerList.get(0));
+            } else if ((getDistanceFromCenter() + 2 * bot.getSize()) > gameState.world.getRadius()) {
                 playerAction.heading = goToCenter();
                 System.console().printf("Get Away from Out Of Bound\n");
             } else if (nearestPlayerList.get(0).getSize() > bot.getSize() &&
@@ -228,6 +238,4 @@ public class BotService {
     private int toDegrees(double v) {
         return (int) (v * (180 / Math.PI));
     }
-
-
 }

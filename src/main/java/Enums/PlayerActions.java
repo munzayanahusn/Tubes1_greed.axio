@@ -5,9 +5,9 @@ public enum PlayerActions {
   STOP (2),
   START_AFTERBURNER (3),
   STOP_AFTERBURNER (4),
-  FIRE_TORPEDOES (5),
-  FIRE_SUPERNOVA(6),
-  DETONATE_SUPERNOVA(7),
+  FireTorpedoes (5),
+  FireSupernova (6),
+  DetonateSupernova (7),
   FIRE_TELEPORT(8),
   TELEPORT(9),
   ACTIVATE_SHIELD(10);
