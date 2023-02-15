@@ -83,8 +83,12 @@ public class BotService {
             System.console().printf("Player heading" + bot.currentHeading + "\n");
             
             // Stop Afterburner
-            if (bot.getSize() <= 5) {
-                playerAction.action = PlayerActions.STOP_AFTERBURNER;
+            if (bot.effectsCode%2 == 1) {
+                if (bot.getSize() <= 5) {
+                    playerAction.action = PlayerActions.STOP_AFTERBURNER;
+                } else {
+                    playerAction.action = PlayerActions.FORWARD;
+                }
                 playerAction.heading = getHeadingBetween(bot, nearestPlayerList.get(0));
             }
 
@@ -146,8 +150,14 @@ public class BotService {
         GameObject retObject = null;
         GameObject temp = null;
         int i = 0;
+        
+        if (playerList.get(0).getSize() < bot.getSize() && (getDistanceBetween(bot, playerList.get(0)) < 4 * bot.getSize())){
+            // Target : Enemy
+            System.console().printf("Current Target : Enemy \n");
+            retObject = playerList.get(0);
+        }
 
-        if (!supernovaList.isEmpty()){
+        else if (!supernovaList.isEmpty()){
             while(temp == null && i < supernovaList.size()) {
                 enemyDistance = getEnemyDistance(playerList, supernovaList.get(i));
                 if (getDistanceBetween(enemyDistance.get(0), supernovaList.get(i)) < getDistanceBetween(bot, supernovaList.get(i))
@@ -164,13 +174,6 @@ public class BotService {
                     retObject = temp;
                 }
             }
-        }
-
-        
-        else if (playerList.get(0).getSize() < bot.getSize() && (getDistanceBetween(bot, playerList.get(0)) < 4 * bot.getSize())){
-            // Target : Enemy
-            System.console().printf("Current Target : Enemy \n");
-            retObject = playerList.get(0);
         }
 
         else if (!superFoodList.isEmpty()){
