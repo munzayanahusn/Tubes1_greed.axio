@@ -35,173 +35,160 @@ public class BotService {
         this.playerAction = playerAction;
     }
 
+    public List<GameObject> getNearestPlayerList() {
+        return gameState.getPlayerGameObjects().stream()
+                    .filter(item -> item.id != bot.id)
+                    .sorted(Comparator.comparing(item -> getDistanceBetween(bot, item)))
+                    .collect(Collectors.toList());
+    }
+
+    public List<GameObject> getFoodList() {
+        return gameState.getGameObjects()
+                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.FOOD)
+                    .sorted(Comparator.comparing(item -> getDistanceBetween(bot, item)))
+                    .collect(Collectors.toList());
+    }
+
+    public List<GameObject> getSuperFoodList() {
+        return gameState.getGameObjects()
+                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.SUPERFOOD)
+                    .sorted(Comparator.comparing(item -> getDistanceBetween(bot, item)))
+                    .collect(Collectors.toList());
+    }
+
     public void computeNextPlayerAction(PlayerAction playerAction) {
         Console console = System.console();
-        // playerAction.action = PlayerActions.FORWARD;
 
         if (!gameState.getGameObjects().isEmpty()) {
-            var nearestObstacleList = gameState.getGameObjects()
-                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.GAS_CLOUD
-                            || item.getGameObjectType() == ObjectTypes.ASTEROID_FIELD
-                            || item.getGameObjectType() == ObjectTypes.WORMHOLE)
-                    .sorted(Comparator.comparing(item -> getDistanceBetween(bot, item)))
-                    .collect(Collectors.toList());
+            var nearestSuperFoodList = getSuperFoodList();
+            var nearestFoodList = getFoodList();
+            var nearestPlayerList = getNearestPlayerList();
 
-            var nearestSuperFoodList = gameState.getGameObjects()
-                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.SUPERFOOD)
-                    .sorted(Comparator
-                            .comparing(item -> getDistanceBetween(bot, item)))
-                    .collect(Collectors.toList());
+            // Showing Log
+            System.console().printf("=======================\nTicks " + gameState.world.currentTick + "\n");
+            System.console().printf("size: " + bot.getSize() + " pos: " + bot.position.x + "," + bot.position.y + "\n");
+            System.console().printf("heading: " + bot.currentHeading + " speed: " + bot.speed + "\n");
+            System.console().printf("code: " + bot.effectsCode + " salvo: " + bot.torpedoSalvoCount + "\n");
+            System.console().printf("np dist: " + getDistanceBetween(bot, nearestPlayerList.get(0)));
+            System.console().printf("np size: " + nearestPlayerList.get(0).getSize() + "\n");
 
-            var nearestFoodList = gameState.getGameObjects()
-                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.FOOD)
-                    .sorted(Comparator
-                            .comparing(item -> getDistanceBetween(bot, item)))
-                    .collect(Collectors.toList());
+            // Setting Target Priority
+            GameObject target = setTarget(nearestSuperFoodList, nearestFoodList, nearestPlayerList);
 
-            var nearestPlayerList = gameState.getPlayerGameObjects()
-                    .stream().filter(item -> item.id != bot.id)
-                    .sorted(Comparator.comparing(item -> getDistanceBetween(bot, item)))
-                    .collect(Collectors.toList());
-
-            var nearestSupernovaList = gameState.getGameObjects()
-                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.SUPERNOVA_PICKUP)
-                    .sorted(Comparator.comparing(item -> getDistanceBetween(bot, item)))
-                    .collect(Collectors.toList());
-
-            // ACTION
-            // Out Of Boundaries
-
-            System.console().printf("------------------\nTicks " + gameState.world.currentTick + "\n");
-            System.console().printf("Nearest Player distance = " + getDistanceBetween(bot, nearestPlayerList.get(0)) + "\n");
-            System.console().printf("Nearest Player size = " + nearestPlayerList.get(0).getSize() + "\n");
-            System.console().printf("Bot size = " + bot.getSize() + "\n");
-            System.console().printf("Nearest Obstacle Distance  = " + getDistanceBetween(bot, nearestObstacleList.get(0)) + "\n");
-            System.console().printf("Torpedo Salvo count = " + bot.torpedoSalvoCount + "\n");
-            // System.console().printf("Supernova count = " + bot.supernovaAvailable + "\n");
-            
-            // SUPERNOVA DIKOMEN DL KRN GBS DETONATE :((
-            // if (bot.supernovaAvailable > 0) {
-            //     System.console().printf("Firing Supernova\n");
-            //     playerAction.action = PlayerActions.FireSupernova;
-            //     playerAction.heading = getHeadingBetween(bot, nearestPlayerList.get(0));
-            // } else 
-
+            // Entering Gas Cloud For The First Time, Starting Afterburner
             if (bot.effectsCode == 4 || bot.effectsCode == 6) {
-                System.console().printf("Gas Cloud Detected\n");
-                System.console().printf("Starting After Burner\n");
+                System.console().printf("Entering Gas Cloud, Starting Afterburner\n");
                 playerAction.action = PlayerActions.StartAfterburner;
-                playerAction.heading = goToCenter();
-            } else if (bot.effectsCode == 5 || bot.effectsCode == 7) {
-                System.console().printf("Gas Cloud Detected\n");
-                System.console().printf("After Burner Activated, Heading Toward Center\n");
+                playerAction.heading = getHeadingBetween(bot, target);
+            } 
+            // Still Inside Gas Cloud, Keep Chasing Target
+            else if (bot.effectsCode == 5 || bot.effectsCode == 7) {
+                System.console().printf("Inside Gas Cloud, Keep Chasing\n");
                 playerAction.action = PlayerActions.Forward;
-                playerAction.heading = goToCenter();
-            } else if (bot.effectsCode == 1 || bot.effectsCode == 3) {
-                System.console().printf("Out Of Gas Cloud\n");
+                playerAction.heading = getHeadingBetween(bot, target);
+            }
+            // Afterburner Is Not Needed, Stop Afterburner 
+            else if (bot.effectsCode%2 == 1 && (bot.getSize() <= nearestPlayerList.get(0).getSize() + 5 || bot.getSize() <= 20)) {
                 System.console().printf("Stoping After Burner\n");
                 playerAction.action = PlayerActions.StopAfterburner;
-                playerAction.heading = getHeadingBetween(bot, setTarget(nearestSuperFoodList, nearestFoodList, nearestPlayerList, nearestSupernovaList));
-            } else if (bot.torpedoSalvoCount > 0 && bot.getSize() > 20) {
+                playerAction.heading = getHeadingBetween(bot, target);
+            }
+            // Torpedo Fireable, Fire Torpedo
+            else if (bot.torpedoSalvoCount > 0 && bot.getSize() > 20 && bot.effectsCode <= 1
+                    && nearestPlayerList.get(0).effectsCode == 0 && nearestPlayerList.get(0).speed <= 60) {
                 System.console().printf("Firing Torpedo\n");
                 playerAction.action = PlayerActions.FireTorpedoes;
                 playerAction.heading = getHeadingBetween(bot, nearestPlayerList.get(0));
-            } else if ((getDistanceFromCenter() + 2 * bot.getSize()) > gameState.world.getRadius()) {
+            } 
+            // Bot Approachin World Bounds, Go To Center
+            else if ((getDistanceFromCenter() + 2 * bot.getSize()) > gameState.world.getRadius()) {
                 System.console().printf("Get Away from Out Of Bound\n");
                 playerAction.action = PlayerActions.Forward;
-                playerAction.heading = goToCenter();
-            } else if (nearestPlayerList.get(0).getSize() > bot.getSize() &&
-                    (getDistanceBetween(bot, nearestPlayerList.get(0)) <= (bot.getSize() * 1.5 + nearestPlayerList.get(0).getSize()))){
+                // Bigger Enemy Detected On The Way To The Center, Turn 90 Degrees
+                if (nearestPlayerList.get(0).getSize() > bot.getSize() &&
+                    (getDistanceBetween(bot, nearestPlayerList.get(0)) < (nearestPlayerList.get(0).getSize())*5 + bot.getSize()*2)) {
+                    System.console().printf("Bigger player detected\nEscaping\n");
+                    playerAction.heading = getHeadingAway(bot, nearestPlayerList.get(0)) + 90;
+                } 
+                // Road Is Clear, Proceed To The Center
+                else {
+                    playerAction.heading = goToCenter();
+                }
+            } 
+            // Bigger Enemy Approaching, Head To The Other Direction
+            else if (nearestPlayerList.get(0).getSize() > bot.getSize() &&
+                    (getDistanceBetween(bot, nearestPlayerList.get(0)) < (nearestPlayerList.get(0).getSize())*5 + bot.getSize()*2)){
                 System.console().printf("Get Away from Nearest Bigger Player\n");
                 playerAction.action = PlayerActions.Forward;
-                playerAction.heading = getHeadingAway(nearestPlayerList.get(0));
-            // } else if (!nearestObstacleList.isEmpty() && (getDistanceBetween(bot, nearestObstacleList.get(0)) <= (nearestObstacleList.get(0).getSize() + bot.getSize()))) {
-            //     playerAction.action = PlayerActions.Forward;
-            //     playerAction.heading = getHeadingAway(nearestObstacleList.get(0));
-            //     System.console().printf("Get Away from Nearest Obstacle\n");
-            } else {
+                playerAction.heading = getHeadingAway(bot, nearestPlayerList.get(0));
+            } 
+            // Chase Initial Target
+            else {
                 System.console().printf("Targeting\n");
-                playerAction.action = PlayerActions.Forward;
-                playerAction.heading = getHeadingBetween(bot, setTarget(nearestSuperFoodList, nearestFoodList, nearestPlayerList, nearestSupernovaList));
+                // Chasing A LOT Smaller Enemy, Start Afterburner
+                if (target == nearestPlayerList.get(0) && bot.effectsCode%2 == 0
+                    && bot.getSize() - target.getSize() > getDistanceBetween(bot, target)/(bot.speed) + 20) {
+                    System.console().printf("Starting After Burner Towards Enemy\n");
+                    playerAction.action = PlayerActions.StartAfterburner;
+                } else {
+                    playerAction.action = PlayerActions.Forward;
+                }
+                playerAction.heading = getHeadingBetween(bot, target);
             }
         }
         this.playerAction = playerAction;
-        System.console().printf(bot.effectsCode + " " + playerAction.getHeading() + "\n");
     }
 
-    public GameObject setTarget(List<GameObject> superFoodList, List<GameObject> foodList, List<GameObject> playerList, List<GameObject> supernovaList){
+    public GameObject setTarget(List<GameObject> superFoodList, List<GameObject> foodList, List<GameObject> playerList){
         List<GameObject> enemyDistance;
         GameObject retObject = null;
         GameObject temp = null;
         int i = 0;
-
+        
+        // Nearest Enemy Is Smaller, Target Enemy
         if (playerList.get(0).getSize() < bot.getSize()){
-            // Target : Enemy
             System.console().printf("Current Target : Enemy \n");
             retObject = playerList.get(0);
-        }
-
-        // SUPERNOVA DIKOMENIN DL KRN GBS DETONATE :((
-        // if (!supernovaList.isEmpty()){
-        //     while(temp == null && i < supernovaList.size()) {
-        //         enemyDistance = getEnemyDistance(playerList, supernovaList.get(i));
-        //         if (getDistanceBetween(enemyDistance.get(0), supernovaList.get(i)) < getDistanceBetween(bot, supernovaList.get(i))
-        //                 || enemyDistance.get(0).currentHeading != getHeadingBetween(enemyDistance.get(0), supernovaList.get(i))) {
-        //             // Ada kemungkinan kesini nih!
-        //             temp = supernovaList.get(i);
-        //         } else i++;
-        //     }
-
-        //     if (temp != null) {
-        //         if (retObject == null || getDistanceBetween(bot, temp) < getDistanceBetween(bot, retObject)) {
-        //             // Target : Supernova!
-        //             System.console().printf("Current Target : Supernova\n");
-        //             retObject = temp;
-        //         }
-        //     }
-        // }
-
+        } 
+        // SuperFood Exist
         else if (!superFoodList.isEmpty()){
             i = 0;
             temp = null;
+            // SuperFood is Closest To Player Or No Enemy Heading Towards It, Target Superfood
             while(temp == null && i < superFoodList.size()) {
                 enemyDistance = getEnemyDistance(playerList, superFoodList.get(i));
-                if (getDistanceBetween(enemyDistance.get(0), superFoodList.get(i)) < getDistanceBetween(bot, superFoodList.get(i))
-                        || enemyDistance.get(0).currentHeading != getHeadingBetween(enemyDistance.get(0), superFoodList.get(i))) {
-                    // Ada kemungkinan kesini nih!
+                if (getDistanceBetween(bot, superFoodList.get(i)) < getDistanceBetween(enemyDistance.get(0), superFoodList.get(i))
+                    || enemyDistance.get(0).currentHeading != getHeadingBetween(enemyDistance.get(0), superFoodList.get(i))) {
                     temp = superFoodList.get(i);
                 } else i++;
             }
-
             if (temp != null) {
                 if (retObject == null || getDistanceBetween(bot, temp) < getDistanceBetween(bot, retObject)) {
-                    // Target : SuperFood
                     System.console().printf("Current Target : SuperFood\n");
                     retObject = temp;
                 }
             }
         }
-
+        // Food Exist
         else if (!foodList.isEmpty()){
             i = 0;
             temp = null;
+            // Food is Closest To Player Or No Enemy Heading Towards It, Target Food
             while(temp == null && i < foodList.size()) {
                 enemyDistance = getEnemyDistance(playerList, foodList.get(i));
-                if (getDistanceBetween(enemyDistance.get(0), foodList.get(i)) < getDistanceBetween(bot, foodList.get(i))
+                if (getDistanceBetween(bot, foodList.get(i)) < getDistanceBetween(enemyDistance.get(0), foodList.get(i))
                         || enemyDistance.get(0).currentHeading != getHeadingBetween(enemyDistance.get(0), foodList.get(i))) {
-                    // Ada kemungkinan kesini nih!
                     temp = foodList.get(i);
                 } else i++;
             }
-            if (temp == null) temp = foodList.get(0);
-
             if (temp != null) {
                 if (retObject == null ||getDistanceBetween(bot, temp) < getDistanceBetween(bot, retObject)) {
-                    // Target : Food
                     System.console().printf("Current Target : Food\n");
                     retObject = temp;
                 }
             }
+            // Target Nearest Food Unconditionally
+            else temp = foodList.get(0);
         }
         return retObject;
     }
@@ -246,18 +233,11 @@ public class BotService {
                 otherObject.getPosition().x - object.getPosition().x));
         return (direction + 360) % 360;
     }
-    private int getHeadingAway(GameObject otherObject) {
-        var direction = 0;
-        if (!anotherWay){
-            direction = toDegrees(Math.atan2( otherObject.getPosition().y + 90,
-                    otherObject.getPosition().x + 90));
-            anotherWay = true;
-        } else {
-            direction = toDegrees(Math.atan2( otherObject.getPosition().y + 180,
-                    otherObject.getPosition().x + 180));
-            anotherWay = false;
-        }
-        return (direction + 360) % 360;
+    private int getHeadingAway(GameObject bot, GameObject otherObject) {
+        var direction = toDegrees(Math.atan2(
+                bot.getPosition().x - otherObject.getPosition().x,
+                bot.getPosition().y - otherObject.getPosition().y));
+        return direction;
     }
     private int toDegrees(double v) {
         return (int) (v * (180 / Math.PI));
