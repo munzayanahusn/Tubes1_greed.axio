@@ -38,6 +38,8 @@ public class BotService {
         Console console = System.console();
 
         if (!gameState.getGameObjects().isEmpty()) {
+            
+            // Get List of Game Objects
             var nearestSuperFoodList = getSuperFoodList();
             var nearestFoodList = getFoodList();
             var nearestPlayerList = getNearestPlayerList();
@@ -61,23 +63,23 @@ public class BotService {
             GameObject target = setTarget(nearestSuperFoodList, nearestFoodList, nearestPlayerList);
             
             // Entering Gas Cloud For The First Time, Starting Afterburner
-            if (isEnteringGasCloud(bot)) {
+            if (isEnteringGasCloud(bot) && !isAfterBurnerNotNeeded(bot, enemy)) {
                 System.console().printf("Entering Gas Cloud, Starting Afterburner\n");
                 playerAction.action = PlayerActions.StartAfterburner;
                 playerAction.heading = getHeadingBetween(bot, target);
             } 
 
-            // Still Inside Gas Cloud, Keep Chasing Target
-            else if (isInsideGasCloud(bot)) {
-                System.console().printf("Inside Gas Cloud, Keep Chasing\n");
-                playerAction.action = PlayerActions.Forward;
-                playerAction.heading = getHeadingBetween(bot, target);
-            }
-
             // Afterburner Is Not Needed, Stop Afterburner 
             else if (isAfterBurnerNotNeeded(bot, enemy)) {
                 System.console().printf("Stoping After Burner\n");
                 playerAction.action = PlayerActions.StopAfterburner;
+                playerAction.heading = getHeadingBetween(bot, target);
+            }
+
+            // Still Inside Gas Cloud, Keep Chasing Target
+            else if (isInsideGasCloud(bot)) {
+                System.console().printf("Inside Gas Cloud, Keep Chasing\n");
+                playerAction.action = PlayerActions.Forward;
                 playerAction.heading = getHeadingBetween(bot, target);
             }
 
@@ -93,7 +95,7 @@ public class BotService {
                 System.console().printf("Get Away from Out Of Bound\n");
                 playerAction.action = PlayerActions.Forward;
 
-                // Bigger Enemy Detected On The Way To The Center, Turn 60 Degrees
+                // Bigger Enemy Detected On The Way To The Center, Turn 45 Degrees
                 if (isEnemyApproachingFromCenter(bot, enemy)) {
                     System.console().printf("Bigger player detected\nEscaping\n");
                     playerAction.heading = goToCenter() + 45;
