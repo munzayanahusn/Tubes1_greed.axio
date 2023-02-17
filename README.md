@@ -57,7 +57,7 @@ atau ketikkan `cd ./logger-publish/` pada terminal
 
 ## Screenshot Hasil Pengujian
 
-![Galaxio greed.axio Program](./program.jpg)
+<img src="./program.png" width="450">
 
 ## Struktur Program
 
@@ -81,7 +81,7 @@ atau ketikkan `cd ./logger-publish/` pada terminal
     │   └───greed.axio.jar
     ├───Dockerfile
     ├───pom.xml
-    ├───program.jpg
+    ├───program.png
     └───README.md
 ```
 
