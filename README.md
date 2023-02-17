@@ -9,8 +9,8 @@ Pemanfaatan Algoritma Greedy dalam Aplikasi Permainan “Galaxio” <br>
 - [Penjelasan Algoritma](#penjelasan-algoritma)
 - [Pre-Requisite](#pre-requisite)
 - [Cara Menjalankan Program](#cara-menjalankan-program)
-- [Cara Menampilkan Hasil Permainan](#cara-menampilkan-hasil-permainan)
-- [Screenshot program](#screenshot-program)
+- [Cara Visualisasi Hasil Permainan](#cara-visualisasi-hasil-permainan)
+- [Screenshot Hasil Pengujian](#screenshot-hasil-pengujian)
 - [Struktur Program](#struktur-program)
 - [Kontributor](#kontributor)
 
@@ -44,7 +44,7 @@ atau ketikkan `cd ./logger-publish/` pada terminal
 9. Jalankan seluruh bot yang ingin dimainkan dengan memasukkan perintah `java -jar {path-JAR-bot}` pada setiap terminal tersebut
 10. Jika permainan berhasil diselenggarakan, setelah permainan selesai riwayat permainan akan tersimpan pada 2 file JSON `GameStateLog_{Timestamp}` dalam folder `logger-publish`.
 
-## Cara Menampilkan Hasil Permmainan dengan Visualiser
+## Cara Visualisasi Hasil Permainan
 
 1. Lakukan ekstrak pada file zip Galaxio dalam folder “visualiser” sesuai dengan OS device yang digunakan
 2. Jalankan aplikasi Galaxio
@@ -55,9 +55,9 @@ atau ketikkan `cd ./logger-publish/` pada terminal
 7. Setelah masuk ke visualisasinya, kalian dapat melakukan start, pause, rewind, dan reset
 8. Silahkan buat bot terbaik kalian dan selamat menikmati permainan
 
-## Hasil Pengujian Algoritma
+## Screenshot Hasil Pengujian
 
-![BNMO Program](./program.jpg)
+![Galaxio greed.axio Program](./program.jpg)
 
 ## Struktur Program
 
@@ -78,12 +78,13 @@ atau ketikkan `cd ./logger-publish/` pada terminal
     │   │   └───BotServices.java
     │   └───Main.java
     ├───target
-    │   └───Javabot.jar
+    │   └───greed.axio.jar
+    ├───program.jpg
     └───README.md
 ```
 
 ## Kontributor
 
-1. 13521081 Bagas Aryo Seto
-2. 13521077 Husnia Munzayana
-3. 13521133 Cetta Reswara Parahita
+13521081 Bagas Aryo Seto
+13521077 Husnia Munzayana
+13521133 Cetta Reswara Parahita
