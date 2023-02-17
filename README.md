@@ -20,7 +20,7 @@ Galaxio adalah sebuah game battle royale yang mempertandingkan beberapa bot kapa
 
 ## Penjelasan Algoritma
 
-Galax
+Algoritma greedy yang digunakan mengombinasikan berbagai paradigma parameter, antara lain obstacle, defense, powerups, size, dan attacking other players. Algoritma akan menetapkan target dengan prioritas player terdekat, superfood terdekat, atau makanan terdekat terlebih dahulu. Kemudian, akan diperhatikan obstacle-obstacle yang dapat dihindari, dapat juga digunakan powerups untuk mempercepat penghindaran. Obstacle seperti supernova, asteroid fields, dan teleporter tidak akan diimplementasikan karena efek yang ditimbulkan hanya sedikit atau frekuensi kemunculan yang jarang. Obstacle gas cloud sangat perlu dihindari dengan berjalan ke target terdekat secepat mungkin memanfaatkan afterburner. Kemudian menghindari world bound diprioritaskan dengan mengubah arah player menjadi ke arah pusat menjauhi boundaries yang ada. Terakhir menghindari musuh yang jauh lebih besar dilakukan dengan mengubah arah menjadi searah tangen posisi musuh dan bot. Obstacle berupa serangan torpedo dari musuh lain dapat di-counter dengan melakukan attack torpedo balik. Apabila semua obstacle telah berhasil dihindari atau tidak ada obstacle yang perlu dihindari, selanjutnya dapat dilakukan targeting pada target yang telah ditentukan di awal.
 
 ## Pre-Requisite
 * Java (minimal Java 11), dapat diunduh melalui `https://www.oracle.com/java/technologies/downloads/#java`
@@ -44,13 +44,18 @@ atau ketikkan `cd ./logger-publish/` pada terminal
 9. Jalankan seluruh bot yang ingin dimainkan dengan memasukkan perintah `java -jar {path-JAR-bot}` pada setiap terminal tersebut
 10. Jika permainan berhasil diselenggarakan, setelah permainan selesai riwayat permainan akan tersimpan pada 2 file JSON `GameStateLog_{Timestamp}` dalam folder `logger-publish`.
 
-## Cara Menampilkan Hasil Permainan
+## Cara Menampilkan Hasil Permmainan dengan Visualiser
 
-1. Pastikan sudah melakukan kompilasi pada program
-2. Pada root directory jalankan command `./main`
-3. Jika berhasil di run, akan muncul splash screen
+1. Lakukan ekstrak pada file zip Galaxio dalam folder “visualiser” sesuai dengan OS device yang digunakan
+2. Jalankan aplikasi Galaxio
+3. Buka menu “Options”
+4. Salin path folder “logger-publish” kalian pada “Log Files Location”, lalu pilih “Save”
+5. Buka menu “Load”
+6. Pilih file JSON yang ingin diload pada “Game Log”, lalu “Start”
+7. Setelah masuk ke visualisasinya, kalian dapat melakukan start, pause, rewind, dan reset
+8. Silahkan buat bot terbaik kalian dan selamat menikmati permainan
 
-## Screenshot Program
+## Hasil Pengujian Algoritma
 
 ![BNMO Program](./program.jpg)
 
@@ -58,11 +63,23 @@ atau ketikkan `cd ./logger-publish/` pada terminal
 
 ```bash
 └───Tubes_greed.axio
-    ├───adt
-    │   ├───kulkas
-    │   └───waktu
-    ├───buy
-    └───undoredo
+    ├───src/main/java
+    │   ├───enums
+    │   │   └───ObjectTypes.java
+    │   │   └───PlayerActions.java
+    │   └───models
+    │   │   └───GameObject.java
+    │   │   └───GameState.java
+    │   │   └───GameStateDto.java
+    │   │   └───PlayerAction.java
+    │   │   └───Position.java
+    │   │   └───World.java
+    │   └───services
+    │   │   └───BotServices.java
+    │   └───Main.java
+    ├───target
+    │   └───Javabot.jar
+    └───README.md
 ```
 
 ## Kontributor
