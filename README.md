@@ -79,6 +79,8 @@ atau ketikkan `cd ./logger-publish/` pada terminal
     │   └───Main.java
     ├───target
     │   └───greed.axio.jar
+    ├───Dockerfile
+    ├───pom.xml
     ├───program.jpg
     └───README.md
 ```
