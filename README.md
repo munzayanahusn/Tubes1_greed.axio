@@ -63,6 +63,8 @@ atau ketikkan `cd ./logger-publish/` pada terminal
 
 ```bash
 └───Tubes_greed.axio
+    ├───doc
+    │   └───greed.axio.pdf
     ├───src/main/java
     │   ├───enums
     │   │   └───ObjectTypes.java
