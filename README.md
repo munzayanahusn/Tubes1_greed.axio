@@ -87,6 +87,6 @@ atau ketikkan `cd ./logger-publish/` pada terminal
 
 ## Kontributor
 
-13521081 Bagas Aryo Seto
-13521077 Husnia Munzayana
+13521081 Bagas Aryo Seto <br>
+13521077 Husnia Munzayana <br>
 13521133 Cetta Reswara Parahita
